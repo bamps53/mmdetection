@@ -5,7 +5,7 @@ import numpy as np
 import torch
 import torch.distributed as dist
 from mmcv.parallel import MMDataParallel, MMDistributedDataParallel
-from mmcv.runner import DistSamplerSeedHook, Runner
+from mmcv.runner import DistSamplerSeedHook, Runner, WandbLoggerHook
 
 from mmdet.core import (DistEvalHook, DistOptimizerHook, EvalHook,
                         Fp16OptimizerHook, build_optimizer)
@@ -157,6 +157,14 @@ def train_detector(model,
         eval_cfg = cfg.get('evaluation', {})
         eval_hook = DistEvalHook if distributed else EvalHook
         runner.register_hook(eval_hook(val_dataloader, **eval_cfg))
+
+    if cfg.wandb:
+        runner.register_hook(
+            WandbLoggerHook(init_kwargs=dict(
+                project=cfg.project,
+                name=cfg.exp_name,
+                config=cfg))
+            )
 
     if cfg.resume_from:
         runner.resume(cfg.resume_from)
