@@ -347,7 +347,7 @@ total_epochs = 20
 dist_params = dict(backend='nccl')
 log_level = 'INFO'
 work_dir = f'./work_dirs/{exp_name}_fold{fold}_{num_folds}'
-load_from = 'models/cascade_mask_rcnn_x101_32x4d_fpn_20e_20181218-761a3473.pth'
+load_from = 'models/cascade_mask_rcnn_x101_32x4d_fpn_1x_coco_20200201-0f411b1f.pth'
 resume_from = None
 workflow = [('train', 1)]
 wandb = True
