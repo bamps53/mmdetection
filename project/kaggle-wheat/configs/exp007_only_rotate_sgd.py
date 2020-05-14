@@ -186,13 +186,62 @@ test_cfg = dict(
         nms_thr=0.7,
         min_bbox_size=0),
     rcnn=dict(
-        score_thr=0.05, nms=dict(type='nms', iou_thr=0.5), max_per_img=100))
+        score_thr=0.05, nms=dict(type='nms', iou_thr=0.5), max_per_img=125))
 
 # dataset settings
 dataset_type = 'WheatDataset'
 data_root = 'project/kaggle-wheat/data/'
 img_norm_cfg = dict(
     mean=[123.675, 116.28, 103.53], std=[58.395, 57.12, 57.375], to_rgb=True)
+albu_train_transforms = [
+    # dict(
+    #     p=0.5,
+    #     max_h_size=64,
+    #     type='Cutout'
+    # ),
+    dict(
+        p=1.0,
+        type='RandomRotate90'
+    ),
+    # dict(
+    #     type='ShiftScaleRotate',
+    #     shift_limit=0.0625,
+    #     scale_limit=0.0,
+    #     rotate_limit=0,
+    #     interpolation=1,
+    #     p=0.5),
+    # dict(
+    #     type='RandomBrightnessContrast',
+    #     brightness_limit=[0.1, 0.3],
+    #     contrast_limit=[0.1, 0.3],
+    #     p=0.2),
+    # dict(
+    #     type='OneOf',
+    #     transforms=[
+    #         dict(
+    #             type='RGBShift',
+    #             r_shift_limit=10,
+    #             g_shift_limit=10,
+    #             b_shift_limit=10,
+    #             p=1.0),
+    #         dict(
+    #             type='HueSaturationValue',
+    #             hue_shift_limit=20,
+    #             sat_shift_limit=30,
+    #             val_shift_limit=20,
+    #             p=1.0)
+    #     ],
+    #     p=0.1),
+    # dict(type='JpegCompression', quality_lower=85, quality_upper=95, p=0.2),
+    # dict(type='ChannelShuffle', p=0.1),
+    # dict(
+    #     type='OneOf',
+    #     transforms=[
+    #         dict(type='Blur', blur_limit=3, p=1.0),
+    #         dict(type='MedianBlur', blur_limit=3, p=1.0)
+    #     ],
+    #     p=0.1),
+]
 train_pipeline = [
     dict(type='LoadImageFromFile'),
     dict(type='LoadAnnotations', with_bbox=True),
@@ -201,26 +250,25 @@ train_pipeline = [
         img_scale=[(1024, 1024),(512, 512)],
         keep_ratio=True
         ),
-    dict(type='Albu', transforms=[
-        dict(
-            p=0.5,
-            max_h_size=64,
-            type='Cutout'
+    dict(
+        type='Albu',
+        transforms=albu_train_transforms,
+        bbox_params=dict(
+            type='BboxParams',
+            format='pascal_voc',
+            label_fields=['gt_labels'],
+            min_visibility=0.0,
+            filter_lost_elements=True),
+        keymap={
+            'img': 'image',
+            'gt_masks': 'masks',
+            'gt_bboxes': 'bboxes'
+        },
+        update_pad_shape=False,
+        skip_img_without_anno=True
         ),
-        dict(
-            brightness_limit=0.3,
-            contrast_limit=0.3,
-            p=0.5,
-            type='RandomBrightnessContrast'
-        ),
-        dict(
-            p=0.5,
-            quality_lower=80,
-            quality_upper=99,
-            type='JpegCompression'
-        ),
-    ]),
-    dict(type='RandomFlip', flip_ratio=0.5),
+    dict(type='RandomFlip', flip_ratio=0.5, direction='horizontal'),
+    dict(type='RandomFlip', flip_ratio=0.5, direction='vertical'),
     dict(type='Normalize', **img_norm_cfg),
     dict(type='Pad', size_divisor=32),
     dict(type='DefaultFormatBundle'),
@@ -275,16 +323,15 @@ data = dict(
         pipeline=test_pipeline))
 evaluation = dict(interval=1, metric='bbox')
 # optimizer
-optimizer = dict(_delete_=True, type='Adam', lr=0.0001, weight_decay=0.0001)
-optimizer_config = dict(
-    _delete_=True, grad_clip=dict(max_norm=35, norm_type=2))
+optimizer = dict(type='SGD', lr=0.005, momentum=0.9, weight_decay=0.0001)
+optimizer_config = dict(grad_clip=None)
 # learning policy
 lr_config = dict(
     policy='step',
     warmup='linear',
     warmup_iters=500,
     warmup_ratio=1.0 / 3,
-    step=[8, 11, 18])
+    step=[10, 15])
 checkpoint_config = dict(interval=1)
 # yapf:disable
 log_config = dict(
@@ -295,7 +342,7 @@ log_config = dict(
     ])
 # yapf:enable
 # runtime settings
-exp_name = 'exp001'
+exp_name = 'exp007_only_rotate_sgd'
 total_epochs = 20
 dist_params = dict(backend='nccl')
 log_level = 'INFO'
